@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <rect width="48" height="48" rx="8" fill="#2563EB"/>
+  <!-- Left-pointing arrow -->
+  <path d="M11 17L19 10V15H37V19H19V24L11 17Z" fill="white"/>
+  <!-- Right-pointing arrow -->
+  <path d="M37 31L29 24V29H11V33H29V38L37 31Z" fill="white"/>
+</svg>

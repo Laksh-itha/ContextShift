@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ContextShift",
+  "version": "1.0.0",
+  "description": "Switch AIs without losing your context.",
+  "action": {
+  "default_popup": "popup/index.html"
+},
+  "permissions": ["storage"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+  {
+    "matches": ["https://chatgpt.com/*"],
+    "js": ["content.js"]
+  },
+  {
+    "matches": ["https://claude.ai/*"],
+    "js": ["claude.js"]
+  },
+  {
+    "matches": ["https://gemini.google.com/*"],
+    "js": ["gemini.js"]
+  },
+  {
+    "matches": ["https://copilot.microsoft.com/*"],
+    "js": ["copilot.js"]
+  }
+]
+}
