@@ -166,41 +166,56 @@ export default function Home() {
         .map((m, i) => `[${i + 1}] ${m.role.toUpperCase()}:\n${m.content}`)
         .join("\n\n");
 
-      const key = (import.meta as any).env?.VITE_GEMINI_API_KEY;
+            const key = (import.meta as any).env?.VITE_GEMINI_API_KEY;
 
-      const response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": key,
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{
-                text:
-                  `You summarize chat transcripts so the user can continue them in another AI. ` +
-                  `Write the summary in chronological order, ${lengths[summaryDepth]} ` +
-                  `Keep file names, code details and decisions exactly as written. Do not invent anything. ` +
-                  `Output only the summary. Never repeat these instructions or the transcript.`,
-              }],
+      const requestBody = JSON.stringify({
+        systemInstruction: {
+          parts: [{
+            text:
+              `You summarize chat transcripts so the user can continue them in another AI. ` +
+              `Write the summary in chronological order, ${lengths[summaryDepth]} ` +
+              `Keep file names, code details and decisions exactly as written. Do not invent anything. ` +
+              `Output only the summary. Never repeat these instructions or the transcript.`,
+          }],
+        },
+        contents: [{ role: "user", parts: [{ text: `Summarize this conversation:\n\n${transcript}` }] }],
+      });
+
+      // Try the main model first. If Google is overloaded, retry, then fall back to a lighter model.
+      const models = ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-flash-lite-latest"];
+      let response!: Response;
+      let data: any = {};
+
+      for (let attempt = 0; attempt < models.length; attempt++) {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${models[attempt]}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": key,
             },
-            contents: [{ role: "user", parts: [{ text: `Summarize this conversation:\n\n${transcript}` }] }],
-          }),
-        }
-      );
+            body: requestBody,
+          }
+        );
+        data = await response.json().catch(() => ({}));
 
-      const data = await response.json().catch(() => ({}));
+        const overloaded = response.status === 503 || response.status === 429;
+        if (response.ok || !overloaded) break;
+
+        setSummary(`Google is busy, retrying (${attempt + 1}/${models.length - 1})...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000 * (attempt + 1)));
+      }
+
       if (!response.ok) throw new Error(data?.error?.message || "Gemini request failed");
 
       setSummary(data.candidates[0].content.parts[0].text.trim());
       setSummaryExpanded(false);
-    } catch (error) {
+        } catch (error) {
       console.error("Summarization failed:", error);
-      setSummary("Failed to generate summary. Check your Gemini API key and internet connection.");
-    }
-  };
+      const reason = error instanceof Error ? error.message : String(error);
+      setSummary(`Failed to generate summary.\n\nReason: ${reason}`);
+    }};
   const toggleMessage = (index: number) => {
     setExpandedMessages((current) =>
       current.includes(index)
